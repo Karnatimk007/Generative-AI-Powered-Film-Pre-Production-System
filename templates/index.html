@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scriptoria — AI Film Pre-Production Studio</title>
+    <meta
+      name="description"
+      content="Transform your story idea into a complete, production-ready film package with AI-powered screenplay, characters, shot list, and more."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       LANDING PAGE
+  ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="page-landing" class="page active">
+      <!-- Film grain overlay -->
+      <div class="film-grain"></div>
+
+      <!-- Animated film strip top -->
+      <div class="film-strip top">
+        <div class="strip-holes"></div>
+      </div>
+
+      <!-- Hero content -->
+      <div class="landing-content">
+        <div class="logo-badge">✦ AI PRE-PRODUCTION STUDIO ✦</div>
+        <h1 class="landing-title">
+          <span class="title-line">SCRIPTORIA</span>
+        </h1>
+        <p class="landing-tagline">
+          From a single idea to a complete<br />
+          <em>production-ready package</em> — in minutes.
+        </p>
+
+        <div class="feature-pills">
+          <span class="pill">📜 Screenplay</span>
+          <span class="pill">👤 Characters</span>
+          <span class="pill">🎵 Sound Design</span>
+          <span class="pill">🎬 Shot List</span>
+          <span class="pill">📋 Script Breakdown</span>
+        </div>
+
+        <button
+          id="btn-start"
+          class="btn-primary btn-glow"
+          onclick="showUserModal()"
+        >
+          <span class="btn-icon">▶</span>
+          Begin Production
+        </button>
+
+        <p class="landing-sub">
+          Powered by Ollama · Local AI · No data leaves your machine
+        </p>
+      </div>
+
+      <!-- Animated film strip bottom -->
+      <div class="film-strip bottom">
+        <div class="strip-holes"></div>
+      </div>
+
+      <!-- Floating particles -->
+      <div class="particles" id="particles"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       USER MODAL
+  ═══════════════════════════════════════════════════════════════════════ -->
+    <div
+      id="modal-overlay"
+      class="modal-overlay hidden"
+      onclick="closeModalOutside(event)"
+    >
+      <div class="modal-box" id="modal-box">
+        <div class="modal-icon">🎬</div>
+        <h2 class="modal-title">Welcome, Director</h2>
+        <p class="modal-subtitle">What shall we call you on set?</p>
+        <div class="input-group">
+          <input
+            type="text"
+            id="input-name"
+            class="modal-input"
+            placeholder="Your name..."
+            maxlength="40"
+            onkeydown="if (event.key === 'Enter') submitName();"
+            autocomplete="off"
+          />
+          <div class="input-underline"></div>
+        </div>
+        <button id="btn-submit-name" class="btn-primary" onclick="submitName()">
+          Enter the Studio →
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       MAIN APP (Dashboard + Sidebar)
+  ═══════════════════════════════════════════════════════════════════════ -->
+    <div id="page-app" class="page hidden">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <span class="topbar-logo">✦ SCRIPTORIA</span>
+        </div>
+        <div class="topbar-center" id="topbar-greeting">
+          Welcome back, <span id="topbar-name">Director</span>
+        </div>
+        <div class="topbar-right">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Ready</span>
+        </div>
+      </header>
+
+      <div class="app-layout">
+        <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+        <aside class="sidebar">
+          <div class="sidebar-new-story">
+            <button
+              class="btn-new-story"
+              id="btn-new-story"
+              onclick="goToInput()"
+            >
+              <span>✦</span> New Story
+            </button>
+          </div>
+
+          <div class="sidebar-section-label">DELIVERABLES</div>
+          <nav class="sidebar-nav">
+            <button
+              class="nav-item locked"
+              id="nav-screenplay"
+              data-section="screenplay"
+              onclick="showSection('screenplay')"
+            >
+              <span class="nav-icon">📜</span>
+              <span class="nav-label">Screenplay</span>
+              <span class="nav-lock" id="lock-screenplay">🔒</span>
+            </button>
+            <button
+              class="nav-item locked"
+              id="nav-characters"
+              data-section="characters"
+              onclick="showSection('characters')"
+            >
+              <span class="nav-icon">👤</span>
+              <span class="nav-label">Characters</span>
+              <span class="nav-lock" id="lock-characters">🔒</span>
+            </button>
+            <button
+              class="nav-item locked"
+              id="nav-sound_design"
+              data-section="sound_design"
+              onclick="showSection('sound_design')"
+            >
+              <span class="nav-icon">🎵</span>
+              <span class="nav-label">Sound Design</span>
+              <span class="nav-lock" id="lock-sound_design">🔒</span>
+            </button>
+            <button
+              class="nav-item locked"
+              id="nav-script_breakdown"
+              data-section="script_breakdown"
+              onclick="showSection('script_breakdown')"
+            >
+              <span class="nav-icon">📋</span>
+              <span class="nav-label">Script Breakdown</span>
+              <span class="nav-lock" id="lock-script_breakdown">🔒</span>
+            </button>
+            <button
+              class="nav-item locked"
+              id="nav-shot_list"
+              data-section="shot_list"
+              onclick="showSection('shot_list')"
+            >
+              <span class="nav-icon">🎬</span>
+              <span class="nav-label">Shot List</span>
+              <span class="nav-lock" id="lock-shot_list">🔒</span>
+            </button>
+          </nav>
+
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-section-label">EXPORT</div>
+
+          <div class="export-panel" id="export-panel">
+            <p class="export-hint">Generate content first to enable exports.</p>
+          </div>
+        </aside>
+
+        <!-- ── MAIN CONTENT ────────────────────────────────────────────── -->
+        <main class="main-content">
+          <!-- Story Input Panel -->
+          <section id="section-input" class="content-section active">
+            <div class="section-header">
+              <h2 class="section-title">🎭 Your Story</h2>
+              <p class="section-subtitle">
+                Describe your film idea. The more detail you provide, the richer
+                the output.
+              </p>
+            </div>
+
+            <div class="story-input-card">
+              <div class="card-label">STORY CONCEPT</div>
+              <textarea
+                id="story-input"
+                class="story-textarea"
+                placeholder="A retired detective in 1940s Los Angeles is hired to find a missing heiress, only to uncover a conspiracy that reaches the highest levels of the city's power structure. As he digs deeper, he realizes the heiress may not want to be found..."
+                rows="8"
+                maxlength="3000"
+              ></textarea>
+              <div class="char-counter">
+                <span id="char-count">0</span> / 3000
+              </div>
+
+              <div class="generate-row">
+                <button
+                  id="btn-generate"
+                  class="btn-generate"
+                  onclick="generateContent()"
+                >
+                  <span id="btn-generate-icon">⚡</span>
+                  <span id="btn-generate-text"
+                    >Generate Production Package</span
+                  >
+                </button>
+                <div class="generate-hint">
+                  Generates all 5 deliverables simultaneously
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress tracker (hidden until generating) -->
+            <div id="progress-tracker" class="progress-tracker hidden">
+              <div class="progress-item" id="prog-screenplay">
+                <span class="prog-icon">📜</span>
+                <span class="prog-label">Screenplay</span>
+                <span class="prog-status">⏳</span>
+              </div>
+              <div class="progress-item" id="prog-characters">
+                <span class="prog-icon">👤</span>
+                <span class="prog-label">Characters</span>
+                <span class="prog-status">⏳</span>
+              </div>
+              <div class="progress-item" id="prog-sound_design">
+                <span class="prog-icon">🎵</span>
+                <span class="prog-label">Sound Design</span>
+                <span class="prog-status">⏳</span>
+              </div>
+              <div class="progress-item" id="prog-script_breakdown">
+                <span class="prog-icon">📋</span>
+                <span class="prog-label">Script Breakdown</span>
+                <span class="prog-status">⏳</span>
+              </div>
+              <div class="progress-item" id="prog-shot_list">
+                <span class="prog-icon">🎬</span>
+                <span class="prog-label">Shot List</span>
+                <span class="prog-status">⏳</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Content Sections (one per deliverable) -->
+          <section
+            id="section-screenplay"
+            class="content-section hidden"
+            data-key="screenplay"
+          ></section>
+          <section
+            id="section-characters"
+            class="content-section hidden"
+            data-key="characters"
+          ></section>
+          <section
+            id="section-sound_design"
+            class="content-section hidden"
+            data-key="sound_design"
+          ></section>
+          <section
+            id="section-script_breakdown"
+            class="content-section hidden"
+            data-key="script_breakdown"
+          ></section>
+          <section
+            id="section-shot_list"
+            class="content-section hidden"
+            data-key="shot_list"
+          ></section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/js/main.js"></script>
+  </body>
+</html>
