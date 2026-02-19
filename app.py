@@ -1,8 +1,10 @@
+import os
 from flask import Flask, render_template, request, jsonify, session, send_file
 from groq import Groq
 from dotenv import load_dotenv
 import io
 import uuid
+import base64
 
 # ReportLab imports
 from reportlab.lib.pagesizes import letter
@@ -23,7 +25,8 @@ from docx.oxml import OxmlElement
 # App setup
 # ---------------------------------------------------------------------------
 
-load_dotenv()
+# Load .env — override=True ensures a running server picks up key changes immediately
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = 'scriptoria_secret_key_2024'
@@ -31,9 +34,34 @@ app.secret_key = 'scriptoria_secret_key_2024'
 # Server-side store — avoids Flask's 4 KB cookie limit for large AI outputs
 _results_store: dict = {}
 
-import os
 GROQ_MODEL  = "llama-3.3-70b-versatile"
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# —— Startup: confirm HF key is loaded ——
+_hf_key_preview = os.getenv("HF_API_KEY", "")
+if _hf_key_preview and _hf_key_preview != "hf_your_token_here":
+    print(f"[Scriptoria] ✅  HF_API_KEY loaded: {_hf_key_preview[:8]}...")
+else:
+    print("[Scriptoria] ⚠️  HF_API_KEY not set — image generation will prompt for setup.")
+
+
+# Hugging Face client singleton (re-reads env every call so restarts aren't needed)
+_hf_client = None
+
+def get_hf_client():
+    global _hf_client
+    from huggingface_hub import InferenceClient
+    # Always re-read from env — load_dotenv(override=True) keeps it fresh
+    api_key = os.getenv("HF_API_KEY", "").strip()
+    if not api_key or api_key == "hf_your_token_here":
+        _hf_client = None       # reset so next attempt retries
+        raise RuntimeError("HF_API_KEY_NOT_CONFIGURED")
+    if _hf_client is None:      # only create once per valid key
+        _hf_client = InferenceClient(
+            provider="hf-inference",
+            api_key=api_key,
+        )
+    return _hf_client
 
 # ---------------------------------------------------------------------------
 # Groq helper
@@ -150,6 +178,32 @@ STORY:
 
 Generate the complete professional shot list now:"""
 
+
+def build_image_prompt_from_shot(shot_description):
+    return f"""You are a professional Hollywood cinematographer and AI prompt engineer.
+
+Your task: Convert the following shot description into a highly detailed, cinematic AI image generation prompt.
+
+Include ALL of these elements:
+- Shot type (close-up, wide shot, aerial, extreme close-up, over-the-shoulder, etc.)
+- Subject details (age, appearance, clothing, expression, body language)
+- Action happening in the frame
+- Environment/location with rich atmospheric detail
+- Time of day (golden hour, blue hour, midnight, noon, etc.)
+- Lighting style (Rembrandt, softbox, motivated practical, neon, candlelight, etc.)
+- Camera angle (low angle, bird's eye, dutch tilt, eye level, etc.)
+- Lens type and effect (24mm wide-angle, 35mm, 50mm standard, 85mm portrait bokeh, 135mm telephoto compression)
+- Mood and emotion (tense, melancholic, euphoric, foreboding, romantic, etc.)
+- Cinematic style reference (e.g., Blade Runner 2049, No Country for Old Men, La La Land, etc.)
+- Color grading style (desaturated teal-orange, warm analog, cool monochrome, vivid Kodak)
+
+End the prompt with: ultra realistic, 4K, high detail, film still, cinematic photography, anamorphic lens flare
+
+SHOT DESCRIPTION:
+{shot_description}
+
+Output ONLY the final image prompt. No explanation, no preamble, no labels. Just the prompt itself."""
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -208,6 +262,58 @@ def generate():
 def get_results():
     sid = session.get('sid')
     return jsonify(_results_store.get(sid, {}) if sid else {})
+
+
+@app.route('/generate_shot_image', methods=['POST'])
+def generate_shot_image():
+    """Convert a shot description → cinematic AI prompt → HF SDXL image (base64)."""
+    data = request.get_json(force=True, silent=True) or {}
+    shot_text = data.get('shot_description', '').strip()
+
+    if not shot_text:
+        return jsonify({'error': 'shot_description is required'}), 400
+
+    # Step 1 — Groq crafts a rich Hollywood-DP image prompt
+    image_prompt = generate_with_groq(build_image_prompt_from_shot(shot_text))
+    if image_prompt.startswith('[ERROR]'):
+        return jsonify({'error': image_prompt}), 500
+
+    # Step 2 — Call Hugging Face SDXL (free tier, returns a PIL Image)
+    try:
+        client = get_hf_client()
+        pil_image = client.text_to_image(
+            prompt=image_prompt[:900],          # keep within model token limits
+            model="stabilityai/stable-diffusion-xl-base-1.0",
+        )
+    except RuntimeError as env_err:
+        if "HF_API_KEY_NOT_CONFIGURED" in str(env_err):
+            return jsonify({
+                'setup_required': True,
+                'steps': [
+                    'Visit https://huggingface.co/settings/tokens',
+                    'Click "New token" → choose Role: Read → click Create',
+                    'Copy the token (it starts with  hf_...)',
+                    'Open the file  .env  in your project folder',
+                    'Replace  hf_your_token_here  with your real token',
+                    'Save the file, then restart the server:  python app.py',
+                ]
+            }), 200
+        return jsonify({'error': str(env_err)}), 500
+    except Exception as hf_err:
+        return jsonify({'error': f'HF image generation failed: {str(hf_err)}'}), 500
+
+    # Step 3 — Convert PIL Image → base64 PNG data-URI (no external host needed)
+    buf = io.BytesIO()
+    pil_image.save(buf, format='PNG')
+    buf.seek(0)
+    b64 = base64.b64encode(buf.read()).decode('utf-8')
+    data_uri = f"data:image/png;base64,{b64}"
+
+    return jsonify({
+        'success': True,
+        'image_prompt': image_prompt,
+        'image_url': data_uri,   # frontend <img src> accepts data-URIs directly
+    })
 
 # ---------------------------------------------------------------------------
 # Export routes

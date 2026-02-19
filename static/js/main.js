@@ -34,7 +34,6 @@ function checkExistingSession() {
     .then((data) => {
       if (data.name) {
         state.userName = data.name;
-        // Check if there are cached results
         fetch("/get_results")
           .then((r) => r.json())
           .then((results) => {
@@ -45,7 +44,7 @@ function checkExistingSession() {
           });
       }
     })
-    .catch(() => {}); // Silent fail — first visit
+    .catch(() => {});
 }
 
 // ── Particles ──────────────────────────────────────────────────────────────
@@ -88,7 +87,6 @@ function showUserModal() {
 
 function closeModalOutside(event) {
   if (event.target === document.getElementById("modal-overlay")) {
-    // Only close if name already set
     if (state.userName) closeModal();
   }
 }
@@ -103,9 +101,7 @@ async function submitName() {
   if (!name) {
     input.style.borderColor = "#e74c3c";
     input.placeholder = "Please enter your name...";
-    setTimeout(() => {
-      input.style.borderColor = "";
-    }, 1500);
+    setTimeout(() => { input.style.borderColor = ""; }, 1500);
     return;
   }
 
@@ -135,17 +131,13 @@ async function submitName() {
 
 // ── Page transitions ───────────────────────────────────────────────────────
 function enterApp(hasResults) {
-  // Swap pages
   document.getElementById("page-landing").classList.remove("active");
   document.getElementById("page-landing").classList.add("hidden");
   document.getElementById("page-app").classList.remove("hidden");
   document.getElementById("page-app").classList.add("active");
 
-  // Set greeting
-  document.getElementById("topbar-name").textContent =
-    state.userName || "Director";
+  document.getElementById("topbar-name").textContent = state.userName || "Director";
 
-  // If we have cached results, unlock sidebar
   if (hasResults) {
     unlockAllSections();
     buildExportPanel(Object.keys(state.results)[0]);
@@ -158,16 +150,12 @@ function showSection(key) {
   const btn = document.getElementById(`nav-${key}`);
   if (btn && btn.classList.contains("locked")) return;
 
-  // Hide all
   document.querySelectorAll(".content-section").forEach((s) => {
     s.classList.remove("active");
     s.classList.add("hidden");
   });
-  document
-    .querySelectorAll(".nav-item")
-    .forEach((n) => n.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
 
-  // Show target
   const section = document.getElementById(`section-${key}`);
   if (section) {
     section.classList.remove("hidden");
@@ -177,29 +165,21 @@ function showSection(key) {
 
   state.activeSection = key;
 
-  // Populate content if empty
-  if (section && !section.querySelector(".output-card") && state.results[key]) {
+  if (section && !section.querySelector(".output-card") && !section.querySelector(".shot-list-grid") && state.results[key]) {
     renderSection(key, state.results[key]);
   }
 
-  // Update export panel for this section
   if (state.results[key]) buildExportPanel(key);
 }
 
 // ── Go back to story input ─────────────────────────────────────────────────
 function goToInput() {
-  // Deactivate all nav items
-  document
-    .querySelectorAll(".nav-item")
-    .forEach((n) => n.classList.remove("active"));
-
-  // Hide all content sections
+  document.querySelectorAll(".nav-item").forEach((n) => n.classList.remove("active"));
   document.querySelectorAll(".content-section").forEach((s) => {
     s.classList.remove("active");
     s.classList.add("hidden");
   });
 
-  // Show the input section
   const inputSection = document.getElementById("section-input");
   if (inputSection) {
     inputSection.classList.remove("hidden");
@@ -208,12 +188,8 @@ function goToInput() {
 
   state.activeSection = "input";
 
-  // Focus the textarea so the user can start typing immediately
   const ta = document.getElementById("story-input");
-  if (ta) {
-    ta.focus();
-    ta.select();
-  }
+  if (ta) { ta.focus(); ta.select(); }
 }
 
 
@@ -236,12 +212,10 @@ async function generateContent() {
   setGeneratingUI(true);
   setStatus("loading", "Generating...");
 
-  // Show progress tracker
   const tracker = document.getElementById("progress-tracker");
   tracker.classList.remove("hidden");
   resetProgress();
 
-  // Animate progress items while waiting
   const keys = Object.keys(SECTION_META);
   const progressInterval = animateProgress(keys);
 
@@ -262,18 +236,13 @@ async function generateContent() {
     const data = await res.json();
     state.results = data.results;
 
-    // Mark all done
     keys.forEach((k) => setProgressDone(k));
 
-    // Unlock sidebar
     unlockAllSections();
     buildExportPanel(keys[0]);
     setStatus("active", "Complete");
-    showToast(
-      "✅ Production package generated! Select a deliverable from the sidebar.",
-    );
+    showToast("✅ Production package generated! Select a deliverable from the sidebar.");
 
-    // Auto-navigate to screenplay
     setTimeout(() => showSection("screenplay"), 800);
   } catch (err) {
     clearInterval(progressInterval);
@@ -288,7 +257,7 @@ async function generateContent() {
 }
 
 function setGeneratingUI(on) {
-  const btn = document.getElementById("btn-generate");
+  const btn  = document.getElementById("btn-generate");
   const icon = document.getElementById("btn-generate-icon");
   const text = document.getElementById("btn-generate-text");
 
@@ -300,10 +269,8 @@ function setGeneratingUI(on) {
   } else {
     btn.disabled = false;
     btn.classList.remove("generating");
-    document.getElementById("btn-generate-icon").outerHTML =
-      `<span id="btn-generate-icon">⚡</span>`;
-    document.getElementById("btn-generate-text").textContent =
-      "Generate Production Package";
+    document.getElementById("btn-generate-icon").outerHTML = `<span id="btn-generate-icon">⚡</span>`;
+    document.getElementById("btn-generate-text").textContent = "Generate Production Package";
   }
 }
 
@@ -351,14 +318,10 @@ function setProgressError(key) {
 // ── Unlock sidebar ─────────────────────────────────────────────────────────
 function unlockAllSections() {
   Object.keys(SECTION_META).forEach((key) => {
-    const btn = document.getElementById(`nav-${key}`);
+    const btn  = document.getElementById(`nav-${key}`);
     const lock = document.getElementById(`lock-${key}`);
-    if (btn) {
-      btn.classList.remove("locked");
-    }
-    if (lock) {
-      lock.textContent = "";
-    }
+    if (btn)  btn.classList.remove("locked");
+    if (lock) lock.textContent = "";
   });
 }
 
@@ -367,7 +330,12 @@ function renderSection(key, content) {
   const section = document.getElementById(`section-${key}`);
   if (!section) return;
 
-  const meta = SECTION_META[key];
+  if (key === "shot_list") {
+    renderShotList(section, content);
+    return;
+  }
+
+  const meta      = SECTION_META[key];
   const wordCount = content.split(/\s+/).filter(Boolean).length;
 
   section.innerHTML = `
@@ -379,6 +347,163 @@ function renderSection(key, content) {
     </div>
     <div class="output-card">${escapeHtml(content)}</div>
   `;
+}
+
+// ── Shot List Renderer (with per-shot image generation) ───────────────────
+function renderShotList(section, content) {
+  const meta      = SECTION_META["shot_list"];
+  const wordCount = content.split(/\s+/).filter(Boolean).length;
+  const shots     = parseShotsFromText(content);
+
+  let shotsHTML = "";
+  if (shots.length > 0) {
+    shotsHTML = shots.map((shot, i) => `
+      <div class="shot-card" id="shot-card-${i}">
+        <div class="shot-card-header">
+          <span class="shot-number">SHOT ${i + 1}</span>
+          <button
+            class="btn-gen-image"
+            id="btn-genimg-${i}"
+            onclick="generateShotImage(${i}, ${JSON.stringify(shot).replace(/"/g, '&quot;')})"
+            title="Generate a cinematic AI image for this shot"
+          >
+            <span class="gen-img-icon">🎨</span>
+            <span>Generate Frame</span>
+          </button>
+        </div>
+        <div class="shot-description">${escapeHtml(shot)}</div>
+        <div class="shot-image-area" id="shot-img-${i}">
+          <div class="shot-img-placeholder">
+            <span>📽️</span>
+            <p>Click "Generate Frame" to create a cinematic AI image</p>
+          </div>
+        </div>
+      </div>
+    `).join("");
+  } else {
+    shotsHTML = `<div class="output-card">${escapeHtml(content)}</div>`;
+  }
+
+  section.innerHTML = `
+    <div class="output-header">
+      <div>
+        <div class="output-title">${meta.icon} ${meta.title}</div>
+        <div class="output-meta">${wordCount.toLocaleString()} words · ${shots.length} shots · Click 🎨 Generate Frame on any shot for AI image</div>
+      </div>
+    </div>
+    <div class="shot-list-grid">
+      ${shotsHTML}
+    </div>
+  `;
+}
+
+function parseShotsFromText(content) {
+  const blocks = content.split(/\n{2,}/);
+  const shots  = blocks.map(b => b.trim()).filter(b => b.length > 30);
+  if (shots.length >= 2) return shots;
+
+  const linePattern = /(?=(?:SHOT\s+\d+|^\d+[\.:]|Shot\s+\d+))/im;
+  const byLine = content.split(linePattern).map(b => b.trim()).filter(b => b.length > 30);
+  if (byLine.length >= 2) return byLine;
+
+  const chunkSize = 400;
+  const chunks = [];
+  for (let i = 0; i < content.length; i += chunkSize) {
+    chunks.push(content.slice(i, i + chunkSize).trim());
+  }
+  return chunks.filter(c => c.length > 30);
+}
+
+// ── Shot Image Generation — Production Quality ─────────────────────────────
+async function generateShotImage(index, shotDescription) {
+  const btn     = document.getElementById(`btn-genimg-${index}`);
+  const imgArea = document.getElementById(`shot-img-${index}`);
+  if (!btn || !imgArea) return;
+
+  // Cinematic 3-stage loading UI
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spinner" style="width:13px;height:13px;border-width:2px;border-top-color:#d4af37;border-color:rgba(212,175,55,0.25)"></span><span>Generating…</span>';
+
+  imgArea.innerHTML = `
+    <div class="cine-loading">
+      <div class="cine-film-bar">
+        <div class="cine-film-fill" id="fill-${index}"></div>
+      </div>
+      <div class="cine-stages">
+        <span class="cine-stage active" id="stage-a-${index}">🎭 Analyzing shot</span>
+        <span class="cine-stage"        id="stage-b-${index}">✍️ Crafting prompt</span>
+        <span class="cine-stage"        id="stage-c-${index}">🖼️ Rendering frame</span>
+      </div>
+    </div>
+  `;
+
+  const stageTimer = _animateCineStages(index);
+
+  try {
+    const res  = await fetch("/generate_shot_image", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ shot_description: shotDescription }),
+    });
+    const data = await res.json();
+    clearInterval(stageTimer);
+
+    if (!res.ok || data.error) throw new Error(data.error || "Generation failed");
+
+    // Cinematic image reveal
+    imgArea.innerHTML = `
+      <div class="shot-image-wrapper">
+        <img
+          src="${data.image_url}"
+          alt="AI generated cinematic frame"
+          class="shot-generated-image"
+          onload="this.classList.add('loaded')"
+          onerror="this.parentElement.innerHTML='<div class=\\'shot-img-error\\'>⚠️ Could not render. Click Retry.</div>'"
+        />
+        <div class="shot-prompt-overlay">
+          <div class="shot-prompt-label">🎬 AI PROMPT</div>
+          <div class="shot-prompt-text">${escapeHtml(data.image_prompt)}</div>
+        </div>
+        <div class="shot-generated-badge">✦ AI GENERATED</div>
+      </div>
+    `;
+
+    btn.innerHTML = "<span>🔄</span><span>Regenerate</span>";
+    btn.disabled  = false;
+    btn.onclick   = () => generateShotImage(index, shotDescription);
+    showToast("✅ Cinematic frame generated!");
+
+  } catch (err) {
+    clearInterval(stageTimer);
+    imgArea.innerHTML = `
+      <div class="shot-img-error">
+        <div>❌ ${escapeHtml(err.message)}</div>
+        <button class="btn-gen-image" style="margin-top:0.65rem"
+          onclick="generateShotImage(${index}, ${JSON.stringify(shotDescription).replace(/"/g, '&quot;')})">
+          🎨 Try Again
+        </button>
+      </div>`;
+    btn.innerHTML = "<span>🎨</span><span>Retry</span>";
+    btn.disabled  = false;
+  }
+}
+
+// Cinematic 3-stage progress bar animator
+function _animateCineStages(index) {
+  const keys = ["a", "b", "c"];
+  let i = 0;
+  const fill = document.getElementById(`fill-${index}`);
+  if (fill) fill.style.width = "12%";
+
+  return setInterval(() => {
+    i = Math.min(i + 1, keys.length - 1);
+    keys.forEach((k, ki) => {
+      const el = document.getElementById(`stage-${k}-${index}`);
+      if (!el) return;
+      el.className = "cine-stage" + (ki < i ? " done" : ki === i ? " active" : "");
+    });
+    if (fill) fill.style.width = `${12 + i * 42}%`;
+  }, 3500);
 }
 
 function escapeHtml(str) {
@@ -447,11 +572,10 @@ async function exportContent(contentType, fmt) {
       throw new Error(err.error || "Export failed");
     }
 
-    // Convert response to a blob and trigger download
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `scriptoria_${contentType}.${fmt}`;
     document.body.appendChild(a);
     a.click();
@@ -467,14 +591,10 @@ async function exportContent(contentType, fmt) {
 
 // ── Status bar ─────────────────────────────────────────────────────────────
 function setStatus(type, text) {
-  const dot = document.getElementById("status-dot");
+  const dot  = document.getElementById("status-dot");
   const span = document.getElementById("status-text");
-  if (dot) {
-    dot.className = `status-dot ${type}`;
-  }
-  if (span) {
-    span.textContent = text;
-  }
+  if (dot)  dot.className  = `status-dot ${type}`;
+  if (span) span.textContent = text;
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────

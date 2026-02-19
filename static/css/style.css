@@ -978,3 +978,398 @@ body {
     display: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SHOT LIST — Cinematic Image Generation
+══════════════════════════════════════════════════════════════════════════ */
+.shot-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 1050px) {
+  .shot-list-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shot-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+}
+.shot-card:hover {
+  border-color: var(--border-gold);
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.08), var(--shadow-card);
+  transform: translateY(-2px);
+}
+
+/* Shot card header */
+.shot-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.1rem;
+  background: rgba(212, 175, 55, 0.05);
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+}
+
+.shot-number {
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+}
+
+/* Generate Frame button */
+.btn-gen-image {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border-gold);
+  background: var(--gold-dim);
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-gen-image:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.25);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.25);
+  transform: translateY(-1px);
+}
+.btn-gen-image:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.gen-img-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Shot description text */
+.shot-description {
+  padding: 1rem 1.1rem;
+  font-family: "Courier Prime", monospace;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+  max-height: 200px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Image area */
+.shot-image-area {
+  position: relative;
+  min-height: 180px;
+  background: #08080f;
+}
+
+/* Placeholder */
+.shot-img-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+  min-height: 160px;
+}
+.shot-img-placeholder span {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+.shot-img-placeholder p {
+  font-size: 0.78rem;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
+/* Cinematic 3-stage loading UI */
+.cine-loading {
+  padding: 1.4rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Gold progress bar */
+.cine-film-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(212,175,55,0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cine-film-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #a07820, #f0d060, #a07820);
+  border-radius: 2px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(212,175,55,0.5);
+}
+
+/* Stage labels */
+.cine-stages {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.cine-stage {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
+  white-space: nowrap;
+}
+.cine-stage.active {
+  color: var(--gold);
+  border-color: var(--border-gold);
+  background: var(--gold-dim);
+  animation: pulse-stage 1.4s ease infinite;
+}
+.cine-stage.done {
+  color: #2ecc71;
+  border-color: rgba(46,204,113,0.3);
+  background: rgba(46,204,113,0.06);
+}
+@keyframes pulse-stage {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Reuse shimmer for skeleton if needed */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* Generated image wrapper */
+.shot-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  line-height: 0;
+}
+
+/* "✦ AI GENERATED" badge */
+.shot-generated-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: rgba(5,5,12,0.82);
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  font-family: "Cinzel", serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 3px 10px;
+  border-radius: 100px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.shot-generated-image {
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.shot-generated-image.loaded {
+  opacity: 1;
+}
+
+/* Hover overlay showing the AI prompt */
+.shot-prompt-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(5, 5, 12, 0.97) 0%,
+    rgba(5, 5, 12, 0.6) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem;
+  cursor: default;
+  line-height: 1.4;
+}
+.shot-image-wrapper:hover .shot-prompt-overlay {
+  opacity: 1;
+}
+.shot-prompt-label {
+  font-family: "Cinzel", serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin-bottom: 0.4rem;
+}
+.shot-prompt-text {
+  font-size: 0.72rem;
+  color: rgba(240, 236, 224, 0.85);
+  line-height: 1.5;
+  max-height: 120px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+
+/* Error state */
+.shot-img-error {
+  padding: 1.25rem;
+  font-size: 0.82rem;
+  color: #e74c3c;
+  text-align: center;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── HF Setup Card (shown when API key is missing) ──────────────────────── */
+.shot-setup-card {
+  padding: 1.25rem 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  background: linear-gradient(135deg,
+    rgba(212,175,55,0.04) 0%,
+    rgba(13,13,26,0.6) 100%);
+  border-top: 1px solid rgba(212,175,55,0.15);
+}
+
+.setup-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.setup-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+.setup-title {
+  font-family: "Cinzel", serif;
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+.setup-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Numbered steps */
+.setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.setup-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.setup-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gold-dim);
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.setup-step-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* .env preview */
+.setup-env-preview {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.setup-env-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.setup-env-code {
+  font-family: "Courier Prime", monospace;
+  font-size: 0.8rem;
+  color: var(--gold-light);
+  letter-spacing: 0.02em;
+}
+.setup-env-code em {
+  font-style: normal;
+  color: var(--teal);
+}
+
+/* CTA button */
+.btn-setup-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 20px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #d4af37, #a07820);
+  color: #080810;
+  font-family: "Cinzel", serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  transition: var(--transition);
+  align-self: flex-start;
+}
+.btn-setup-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212,175,55,0.35);
+}
