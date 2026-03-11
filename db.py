@@ -3,6 +3,7 @@ db.py — MongoDB connection layer for Scriptoria
 Database: scriptoria_db   Collection: users
 """
 
+import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime, timezone
@@ -14,7 +15,8 @@ _db     = None
 def get_db():
     global _client, _db
     if _db is None:
-        _client = MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=5000)
+        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+        _client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
         _db     = _client["scriptoria_db"]
         # Enforce unique index on email
         _db.users.create_index("email", unique=True)

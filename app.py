@@ -48,7 +48,9 @@ login_mgr.login_view = "login_page"
 _results_store: dict = {}
 
 GROQ_MODEL  = "llama-3.3-70b-versatile"
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Fallback dummy key prevents server crash during platform build steps before env vars are wired
+_groq_key   = os.getenv("GROQ_API_KEY", "dummy_key_for_builds")
+groq_client = Groq(api_key=_groq_key)
 
 # —— Startup: confirm HF key is loaded ——
 _hf_key = os.getenv("HF_API_KEY", "").strip()
