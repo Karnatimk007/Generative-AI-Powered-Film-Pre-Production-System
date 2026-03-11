@@ -1,7 +1,8 @@
 # 🎬 Scriptoria
+
 ### AI-Powered Film Pre-Production Assistant
 
-**Team Name:** ThinkwithUs  
+**Team Name:** ThinkwithUs
 
 Scriptoria is an AI-powered film pre-production platform that transforms a simple story idea into a **complete production-ready filmmaking package within minutes**.
 
@@ -20,7 +21,7 @@ From a **single story prompt**, Scriptoria generates:
 🎵 Sound Design Plan  
 📋 Scene-by-Scene Script Breakdown  
 🎬 Professional Shot List  
-🖼 AI-Generated Shot Visualizations  
+🖼 AI-Generated Shot Visualizations
 
 The system combines **LLMs + diffusion image generation** to simulate a real pre-production workflow used in professional film studios.
 
@@ -39,7 +40,7 @@ Skipping pre-production leads to:
 
 ❌ Poorly planned shoots  
 ❌ Budget overruns  
-❌ Production delays  
+❌ Production delays
 
 ---
 
@@ -59,7 +60,7 @@ Generate 5 Pre-Production Documents
 ↓  
 Display in Web Studio  
 ↓  
-Export as TXT / PDF / DOCX  
+Export as TXT / PDF / DOCX
 
 This turns **weeks of planning into minutes.**
 
@@ -157,7 +158,7 @@ Scriptoria includes **secure user authentication backed by MongoDB.**
 ✔ Password hashing with bcrypt  
 ✔ Session management using Flask-Login  
 ✔ Protected studio routes  
-✔ Logout functionality  
+✔ Logout functionality
 
 ### Database
 
@@ -192,39 +193,31 @@ Example user document
 
 ---
 
-# 🖼 Image Generation (Diffusers)
+# 🖼 Image Generation
 
-Scriptoria uses **Hugging Face Diffusers ModularPipeline** for AI shot visualization.
+Scriptoria uses the **Hugging Face InferenceClient API** for blazing fast AI shot visualization. We currently use `nscale` as the cloud provider and `stabilityai/stable-diffusion-xl-base-1.0` as the model.
 
-Model used:
-
-```
-diffusers-internal-dev/ideogram-character-generator
-```
-
-Example pipeline:
+Example:
 
 ```python
-from diffusers import ModularPipeline
-from diffusers.utils import load_image
+from huggingface_hub import InferenceClient
 
-character_pipe = ModularPipeline.from_pretrained(
-    "diffusers-internal-dev/ideogram-character-generator",
-    trust_remote_code=True
+client = InferenceClient(
+    provider="nscale",
+    api_key=os.environ["HF_API_KEY"],
 )
 
-image = character_pipe(
-    prompt=shot_description,
-    character_image=load_image(character_image_path),
-    output="image"
+image = client.text_to_image(
+    prompt="Cinematic shot of...",
+    model="stabilityai/stable-diffusion-xl-base-1.0",
 )
 ```
 
 Features:
-
-✔ Prompt-only generation  
-✔ Character reference image support  
-✔ Local GPU / CPU inference  
+✔ Extremely fast API generation  
+✔ No local heavy GPUs required  
+✔ High quality diffusion models  
+✔ Concurrent 'Generate All' support
 
 ---
 
@@ -242,16 +235,16 @@ Features:
 
 ## AI Models Used
 
-| Task | Model |
-|-----|------|
-| Screenplay | Groq (openai/gpt-oss-120b) |
-| Characters | Groq |
-| Sound Design | Groq |
-| Script Breakdown | Groq |
-| Shot List | Groq |
-| Optional Local LLM | IBM Granite (Ollama) |
-| Image Generation | Diffusers |
-| Analytical Enhancements | Google Gemini |
+| Task                    | Model                      |
+| ----------------------- | -------------------------- |
+| Screenplay              | Groq (openai/gpt-oss-120b) |
+| Characters              | Groq                       |
+| Sound Design            | Groq                       |
+| Script Breakdown        | Groq                       |
+| Shot List               | Groq                       |
+| Optional Local LLM      | IBM Granite (Ollama)       |
+| Image Generation        | Diffusers                  |
+| Analytical Enhancements | Google Gemini              |
 
 ---
 
@@ -271,11 +264,11 @@ Features:
 
 Generated content can be exported as:
 
-| Format | Library |
-|------|------|
-| PDF | ReportLab |
-| DOCX | python-docx |
-| TXT | Raw text |
+| Format | Library     |
+| ------ | ----------- |
+| PDF    | ReportLab   |
+| DOCX   | python-docx |
+| TXT    | Raw text    |
 
 Formatting includes:
 
@@ -298,12 +291,15 @@ GEN/
 
 ├── static
 │   ├── css
-│   │   └── style.css
+│   │   ├── style.css
+│   │   └── auth-pages.css
 │   └── js
 │       └── main.js
-
+│
 └── templates
-    └── index.html
+    ├── index.html
+    ├── login.html
+    └── register.html
 ```
 
 ---
@@ -379,10 +375,8 @@ Create `.env`
 
 ```
 SECRET_KEY=your_secret_key
-
 GROQ_API_KEY=your_groq_key
-GEMINI_API_KEY=your_gemini_key
-HUGGINGFACE_API_KEY=your_hf_key
+HF_API_KEY=your_hf_key
 ```
 
 ⚠️ Never commit `.env` to GitHub.
@@ -427,7 +421,7 @@ Benefits:
 ✔ Empowers independent filmmakers  
 ✔ Helps student creators  
 ✔ Reduces production planning cost  
-✔ Democratizes filmmaking  
+✔ Democratizes filmmaking
 
 ---
 
@@ -469,7 +463,7 @@ It bridges storytelling and filmmaking logistics.
 
 # 👥 Team
 
-**Team Name:** ThinkwithUs  
+**Team Name:** ThinkwithUs
 
 Hackathon Submission Project
 
