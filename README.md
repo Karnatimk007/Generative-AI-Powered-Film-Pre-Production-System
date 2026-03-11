@@ -1,279 +1,482 @@
-# 🎬 Scriptoria  
-### AI-Powered Film Pre-Production Assistant  
+# 🎬 Scriptoria
+### AI-Powered Film Pre-Production Assistant
+
 **Team Name:** ThinkwithUs  
 
----
+Scriptoria is an AI-powered film pre-production platform that transforms a simple story idea into a **complete production-ready filmmaking package within minutes**.
 
-## 🚀 Overview
-
-Scriptoria is an AI-powered film pre-production web application that transforms a simple story idea into a complete, production-ready pre-production package within minutes.
-
-Using IBM Granite (via Ollama), Groq LLM APIs, Google Gemini, and Hugging Face image generation, Scriptoria automates five major filmmaking deliverables:
-
-- 🎥 Formatted Screenplay  
-- 👤 Character Profiles  
-- 🎵 Sound Design Plan  
-- 📋 Scene-by-Scene Script Breakdown  
-- 🎬 Professional Shot List  
-- 🖼 AI-Generated Shot Visuals (via Hugging Face)
-
-Scriptoria reduces weeks of manual pre-production planning into an instant AI-driven workflow.
+Instead of spending **weeks planning scripts, characters, sound design, and shot lists**, Scriptoria automates the entire workflow using **multi-model AI orchestration**.
 
 ---
 
-## 🎯 Problem Statement
+# 🚀 Overview
 
-Independent filmmakers, student creators, and YouTube series developers often skip structured pre-production due to:
+Scriptoria helps **independent filmmakers, students, and creators** generate the core documents required before filming begins.
 
-- High outsourcing costs (₹50,000 – ₹2,00,000)
-- Limited access to professional screenwriters and cinematographers
+From a **single story prompt**, Scriptoria generates:
+
+🎥 Formatted Screenplay  
+👤 Character Profiles  
+🎵 Sound Design Plan  
+📋 Scene-by-Scene Script Breakdown  
+🎬 Professional Shot List  
+🖼 AI-Generated Shot Visualizations  
+
+The system combines **LLMs + diffusion image generation** to simulate a real pre-production workflow used in professional film studios.
+
+---
+
+# 🎯 Problem Statement
+
+Independent filmmakers often skip structured pre-production due to:
+
+- High outsourcing costs (**₹50,000 – ₹2,00,000**)
+- Lack of access to professional writers
+- Limited planning tools
 - Time constraints
-- Lack of production planning tools
 
-Skipping pre-production leads to poorly planned shoots, budget overruns, and production delays.
+Skipping pre-production leads to:
 
----
-
-## 💡 Our Solution
-
-Scriptoria automates five interconnected pre-production deliverables from a single story input using specialized AI prompts and multi-model orchestration.
-
-### User Flow
-
-User enters story →  
-Flask Backend →  
-AI Models (Granite / Groq / Gemini / HuggingFace) →  
-Generate 5 Documents →  
-Display in SPA →  
-Export (TXT / PDF / DOCX)
+❌ Poorly planned shoots  
+❌ Budget overruns  
+❌ Production delays  
 
 ---
 
-## ✨ Key Features
+# 💡 Our Solution
 
-### 🎬 1. Screenplay Generator
-- Industry-standard formatting
-- ALL CAPS scene headings
-- INT./EXT. structure
-- Proper dialogue formatting
+Scriptoria automates **five interconnected filmmaking deliverables** using AI models.
 
-### 👥 2. Character Profiles
-- Name, Age
+### User Workflow
+
+User enters story idea  
+↓  
+Flask Backend API  
+↓  
+AI Model Orchestration (Groq / Gemini / Granite / Diffusers)  
+↓  
+Generate 5 Pre-Production Documents  
+↓  
+Display in Web Studio  
+↓  
+Export as TXT / PDF / DOCX  
+
+This turns **weeks of planning into minutes.**
+
+---
+
+# ✨ Core Features
+
+## 🎬 1. Screenplay Generator
+
+Automatically generates a **professionally formatted screenplay**.
+
+Features:
+
+- Industry standard screenplay formatting
+- INT. / EXT. scene headings
+- Dialogue formatting
+- Scene descriptions
+- Cinematic pacing
+
+---
+
+## 👥 2. Character Profiles
+
+Generates detailed character sheets including:
+
+- Name
+- Age
 - Personality traits
-- Motivation
+- Motivations
 - Character arc
-- Costume design
+- Costume ideas
 - Relationships
 
-### 🎵 3. Sound Design Plan
+Useful for **casting and costume design.**
+
+---
+
+## 🎵 3. Sound Design Plan
+
+Automatically plans the **audio storytelling layer**.
+
+Includes:
+
 - Background score suggestions
-- Ambient sound planning
+- Ambient sound design
 - Emotional beats
 - Silence usage
 - Scene transitions
 
-### 📋 4. Script Breakdown
-- Location per scene
-- Day/Night classification
+---
+
+## 📋 4. Script Breakdown
+
+Essential for **production planning**.
+
+Per-scene breakdown includes:
+
+- Location
+- Day / Night classification
 - Characters present
 - Props required
 - Costume notes
 - Production requirements
 
-### 🎥 5. Professional Shot List
+---
+
+## 🎥 5. Professional Shot List
+
+Creates a cinematography plan including:
+
 - Shot number
-- Shot type (CU, MS, WS, etc.)
+- Shot type (CU, MS, WS)
 - Camera angle
 - Lens suggestion
 - Lighting mood
 - Camera movement
 
-### 🖼 AI Shot Visualization
-Shot descriptions can be converted into visual reference frames using Hugging Face image generation APIs.
+---
+
+## 🖼 AI Shot Visualization
+
+Shot descriptions can be converted into **visual reference frames** using diffusion models.
+
+These images help directors and cinematographers **visualize scenes before filming.**
 
 ---
 
-## 🏗 Technical Architecture
+# 🔐 Authentication System
 
-### Backend
+Scriptoria includes **secure user authentication backed by MongoDB.**
+
+### Features
+
+✔ Register / Login system  
+✔ Password hashing with bcrypt  
+✔ Session management using Flask-Login  
+✔ Protected studio routes  
+✔ Logout functionality  
+
+### Database
+
+MongoDB
+
+```
+mongodb://localhost:27017
+```
+
+Database
+
+```
+scriptoria_db
+```
+
+Collection
+
+```
+users
+```
+
+Example user document
+
+```json
+{
+  "name": "User Name",
+  "email": "user@email.com",
+  "password_hash": "bcrypt_hash",
+  "created_at": "timestamp"
+}
+```
+
+---
+
+# 🖼 Image Generation (Diffusers)
+
+Scriptoria uses **Hugging Face Diffusers ModularPipeline** for AI shot visualization.
+
+Model used:
+
+```
+diffusers-internal-dev/ideogram-character-generator
+```
+
+Example pipeline:
+
+```python
+from diffusers import ModularPipeline
+from diffusers.utils import load_image
+
+character_pipe = ModularPipeline.from_pretrained(
+    "diffusers-internal-dev/ideogram-character-generator",
+    trust_remote_code=True
+)
+
+image = character_pipe(
+    prompt=shot_description,
+    character_image=load_image(character_image_path),
+    output="image"
+)
+```
+
+Features:
+
+✔ Prompt-only generation  
+✔ Character reference image support  
+✔ Local GPU / CPU inference  
+
+---
+
+# 🏗 Technical Architecture
+
+## Backend
+
 - Python
 - Flask
-- REST API routes
+- REST API architecture
+- MongoDB database
 - Session management
-- Modular AI service structure
 
-### AI Models Used
+---
+
+## AI Models Used
 
 | Task | Model |
-|------|-------|
+|-----|------|
 | Screenplay | Groq (openai/gpt-oss-120b) |
 | Characters | Groq |
 | Sound Design | Groq |
 | Script Breakdown | Groq |
 | Shot List | Groq |
 | Optional Local LLM | IBM Granite (Ollama) |
-| Image Generation | Hugging Face API |
+| Image Generation | Diffusers |
 | Analytical Enhancements | Google Gemini |
 
 ---
 
-## 🎨 Frontend
+## Frontend
 
 - HTML5
-- CSS3 (Cinema Dark Theme with Gold Accents)
+- CSS3
 - JavaScript SPA
-- Progressive Sidebar Navigation
-- Loading Indicators
-- Session Persistence
-- "New Story" Reset Feature
+- Cinematic dark theme
+- Progressive sidebar navigation
+- Loading indicators
+- Session persistence
 
 ---
 
-## 📄 Document Export
+# 📄 Document Export
 
-- PDF → ReportLab (Times-Roman 11pt, 1.5 line spacing)
-- DOCX → python-docx (Cambria 11pt, structured headings)
-- TXT → Clean raw text format
+Generated content can be exported as:
+
+| Format | Library |
+|------|------|
+| PDF | ReportLab |
+| DOCX | python-docx |
+| TXT | Raw text |
+
+Formatting includes:
+
+- Times Roman / Cambria
+- 11pt text
+- Structured headings
+- Clean screenplay style formatting
 
 ---
 
-## 📁 Project Structure
+# 📁 Project Structure
 
+```
 GEN/
-├── app.py  
-├── requirements.txt  
-├── static/  
-│   ├── css/style.css  
-│   └── js/main.js  
-└── templates/  
-    └── index.html  
+
+├── app.py
+├── db.py
+├── requirements.txt
+├── .env
+
+├── static
+│   ├── css
+│   │   └── style.css
+│   └── js
+│       └── main.js
+
+└── templates
+    └── index.html
+```
 
 ---
 
-## ⚙️ Setup Instructions
+# ⚙️ Setup Instructions
 
-### 1️⃣ Clone Repository
+## 1️⃣ Clone Repository
 
 ```bash
-git clone <your-repo-link>
-cd GEN
-2️⃣ Install Dependencies
+git clone https://github.com/YOUR_REPO/scriptoria.git
+cd scriptoria
+```
+
+---
+
+## 2️⃣ Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-3️⃣ Install Ollama (If Using Local Granite)
+---
 
-Download from:
+## 3️⃣ Install MongoDB
+
+Download MongoDB
+
+https://www.mongodb.com/try/download/community
+
+Start MongoDB
+
+```bash
+mongod
+```
+
+MongoDB will run on
+
+```
+mongodb://localhost:27017
+```
+
+---
+
+## 4️⃣ Install Ollama (Optional Local LLM)
+
+Download
+
 https://ollama.com
 
-Check version:
+Check version
 
+```bash
 ollama --version
+```
 
+Pull Granite model
 
-Pull model:
-
+```bash
 ollama pull granite3.2:2b
+```
 
+Start server
 
-Start server:
-
+```bash
 ollama serve
+```
 
-4️⃣ Configure Environment Variables
+---
 
-Create a .env file:
+## 5️⃣ Configure Environment Variables
+
+Create `.env`
+
+```
+SECRET_KEY=your_secret_key
 
 GROQ_API_KEY=your_groq_key
 GEMINI_API_KEY=your_gemini_key
 HUGGINGFACE_API_KEY=your_hf_key
+```
 
+⚠️ Never commit `.env` to GitHub.
 
-Never hardcode API keys.
+---
 
-5️⃣ Run Application
+## 6️⃣ Run Application
+
+```bash
 python app.py
+```
 
+Open browser
 
-Open browser:
-
+```
 http://localhost:5000
+```
 
-🔐 Security & Optimization
+---
 
-Environment variable API keys
+# 🔒 Security
 
-Session-based document storage
+Scriptoria includes:
 
-Input validation
+- Environment variable API keys
+- Password hashing
+- Session authentication
+- Protected API routes
+- Input validation
+- AI request error handling
 
-AI timeout handling
+---
 
-Error handling for API failures
+# 📊 Business Impact
 
-Frontend request locking during generation
+Scriptoria automates services that normally cost:
 
-📊 Business Impact
+**₹50,000 – ₹2,00,000 per project**
 
-Scriptoria automates five professional services that typically cost:
+Benefits:
 
-₹50,000 – ₹2,00,000 per project
+✔ Empowers independent filmmakers  
+✔ Helps student creators  
+✔ Reduces production planning cost  
+✔ Democratizes filmmaking  
 
-Impact:
+---
 
-Empowers independent filmmakers
+# 💰 Potential Monetization
 
-Enables student creators
+- Freemium export limits
+- Subscription model
+- Film school licensing
+- Studio integration API
 
-Reduces production planning cost
+---
 
-Democratizes filmmaking in emerging markets
+# 🏆 Innovation
 
-Potential Monetization
-
-Freemium export limits
-
-Subscription model
-
-Film school licensing
-
-Studio integration API
-
-🏆 Innovation & Uniqueness
-
-No existing AI tool generates a complete interconnected pre-production package in a single system.
+Most AI tools generate **only scripts**.
 
 Scriptoria uniquely:
 
-Maintains interdependency across documents
+✔ Maintains **interdependency across documents**  
+✔ Combines **creative writing + production planning**  
+✔ Generates **cinematography shot lists**  
+✔ Produces **visual shot references**
 
-Follows real film industry conventions
+It bridges storytelling and filmmaking logistics.
 
-Combines creative writing and production logistics
+---
 
-Bridges storytelling and cinematography planning
+# 🚀 Future Scope
 
-🚀 Future Scope
+- Budget Estimator
+- Production Timeline Generator
+- Multi-user collaboration
+- Cloud deployment
+- Multi-language screenplay generation
+- Casting suggestions
+- AI location scouting
 
-Budget Estimator Module
+---
 
-Production Timeline Generator
+# 👥 Team
 
-Team Collaboration System
-
-Cloud Deployment
-
-Multi-language Screenplay Support
-
-Casting & Location AI Suggestions
-
-👥 Team
-
-Team Name: ThinkwithUs
+**Team Name:** ThinkwithUs  
 
 Hackathon Submission Project
 
-🎤 Pitch Summary
+---
 
-Scriptoria reduces weeks of pre-production work into minutes using AI.
+# 🎤 Pitch
 
-We automate screenplay writing, character development, sound planning, script breakdown, and cinematography shot lists — tasks that typically cost up to ₹2 lakhs — making professional filmmaking accessible to everyone.
+Scriptoria transforms a simple story idea into a **complete film pre-production package in minutes using AI.**
+
+By combining **LLMs, diffusion models, and filmmaking workflows**, Scriptoria helps creators focus on storytelling while AI handles the planning.
