@@ -247,7 +247,14 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, email, password, confirm_password: confirm }),
           });
-          const data = await res.json();
+          
+          let data;
+          try {
+            data = await res.json();
+          } catch (e) {
+            showMsg("Server Error (500). Is your MongoDB database running and connected?");
+            return;
+          }
 
           if (!res.ok) {
             if (data.error && data.error.includes("already registered")) {
@@ -261,8 +268,8 @@
 
           showMsg(`Account created! Welcome, ${data.name}! 🎬 Entering studio…`, true);
           setTimeout(() => window.location.href = "/", 900);
-        } catch {
-          showMsg("Network error — is the server running?");
+        } catch (err) {
+          showMsg("Network error — connection failed.");
         } finally {
           setLoading(false);
         }
