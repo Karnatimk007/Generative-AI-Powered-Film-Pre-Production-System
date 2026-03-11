@@ -48,17 +48,19 @@
           <span class="pill">📋 Script Breakdown</span>
         </div>
 
-        <button
+        <a
           id="btn-start"
           class="btn-primary btn-glow"
-          onclick="showUserModal()"
+          href="/login"
         >
           <span class="btn-icon">▶</span>
           Begin Production
-        </button>
+        </a>
 
         <p class="landing-sub">
-          Powered by Ollama · Local AI · No data leaves your machine
+          Powered by Groq · Diffusers · MongoDB
+          &nbsp;·&nbsp;
+          <a href="/register" style="color:var(--gold);text-decoration:none;font-weight:600;">New? Register free →</a>
         </p>
       </div>
 
@@ -72,7 +74,7 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
-       USER MODAL
+       AUTH MODAL  (Login / Register tabs)
   ═══════════════════════════════════════════════════════════════════════ -->
     <div
       id="modal-overlay"
@@ -81,23 +83,128 @@
     >
       <div class="modal-box" id="modal-box">
         <div class="modal-icon">🎬</div>
-        <h2 class="modal-title">Welcome, Director</h2>
-        <p class="modal-subtitle">What shall we call you on set?</p>
-        <div class="input-group">
-          <input
-            type="text"
-            id="input-name"
-            class="modal-input"
-            placeholder="Your name..."
-            maxlength="40"
-            onkeydown="if (event.key === 'Enter') submitName();"
-            autocomplete="off"
-          />
-          <div class="input-underline"></div>
+        <h2 class="modal-title">SCRIPTORIA</h2>
+        <p class="modal-subtitle">Your AI Film Pre-Production Studio</p>
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button id="tab-login"    class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+          <button id="tab-register" class="auth-tab"        onclick="switchTab('register')">Create Account</button>
         </div>
-        <button id="btn-submit-name" class="btn-primary" onclick="submitName()">
-          Enter the Studio →
-        </button>
+
+        <!-- Error / success message -->
+        <div id="auth-msg" class="auth-msg hidden"></div>
+
+        <!-- ── LOGIN FORM ── -->
+        <form id="form-login" class="auth-form" onsubmit="submitLogin(event)" autocomplete="on">
+          <div class="input-group">
+            <label class="input-label" for="login-email">📧 Email Address</label>
+            <input
+              type="email"
+              id="login-email"
+              class="modal-input"
+              placeholder="director@studio.com"
+              autocomplete="email"
+              required
+              oninput="validateLoginEmail(this)"
+            />
+            <span class="field-indicator" id="ind-login-email"></span>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="login-password">🔑 Password</label>
+            <div class="pw-wrap">
+              <input
+                type="password"
+                id="login-password"
+                class="modal-input"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+              />
+              <button type="button" class="pw-toggle" onclick="togglePw('login-password', this)" title="Show/hide password">👁</button>
+            </div>
+          </div>
+          <button id="btn-login" class="btn-auth-submit" type="submit">
+            <span class="btn-auth-content">
+              <span id="btn-login-icon">✦</span>
+              <span id="btn-login-text">Enter the Studio</span>
+            </span>
+          </button>
+          <p class="auth-switch">No account yet? <a href="#" onclick="switchTab('register'); return false;">Create one free →</a></p>
+        </form>
+
+        <!-- ── REGISTER FORM ── -->
+        <form id="form-register" class="auth-form hidden" onsubmit="submitRegister(event)" autocomplete="on">
+          <div class="input-group">
+            <label class="input-label" for="reg-name">👤 Your Name</label>
+            <input
+              type="text"
+              id="reg-name"
+              class="modal-input"
+              placeholder="e.g. Stanley Kubrick"
+              maxlength="60"
+              required
+              oninput="validateField(this, v => v.trim().length >= 2, 'ind-reg-name')"
+            />
+            <span class="field-indicator" id="ind-reg-name"></span>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="reg-email">📧 Email Address</label>
+            <input
+              type="email"
+              id="reg-email"
+              class="modal-input"
+              placeholder="director@studio.com"
+              autocomplete="email"
+              required
+              oninput="validateRegEmail(this)"
+            />
+            <span class="field-indicator" id="ind-reg-email"></span>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="reg-password">🔑 Password <span class="label-hint">(min. 6 chars)</span></label>
+            <div class="pw-wrap">
+              <input
+                type="password"
+                id="reg-password"
+                class="modal-input"
+                placeholder="Create a strong password"
+                autocomplete="new-password"
+                required
+                oninput="onPasswordInput(this)"
+              />
+              <button type="button" class="pw-toggle" onclick="togglePw('reg-password', this)" title="Show/hide password">👁</button>
+            </div>
+            <!-- Password strength meter -->
+            <div class="pw-strength-bar">
+              <div class="pw-strength-fill" id="pw-strength-fill"></div>
+            </div>
+            <div class="pw-strength-label" id="pw-strength-label"></div>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="reg-confirm">✔️ Confirm Password</label>
+            <div class="pw-wrap">
+              <input
+                type="password"
+                id="reg-confirm"
+                class="modal-input"
+                placeholder="Repeat your password"
+                autocomplete="new-password"
+                required
+                oninput="checkConfirm(this)"
+              />
+              <button type="button" class="pw-toggle" onclick="togglePw('reg-confirm', this)" title="Show/hide password">👁</button>
+            </div>
+            <span class="field-indicator" id="ind-reg-confirm"></span>
+          </div>
+          <button id="btn-register" class="btn-auth-submit" type="submit">
+            <span class="btn-auth-content">
+              <span id="btn-register-icon">✦</span>
+              <span id="btn-register-text">Create My Account</span>
+            </span>
+          </button>
+          <p class="auth-switch">Already a member? <a href="#" onclick="switchTab('login'); return false;">← Sign in</a></p>
+        </form>
       </div>
     </div>
 
@@ -116,6 +223,7 @@
         <div class="topbar-right">
           <span class="status-dot" id="status-dot"></span>
           <span id="status-text">Ready</span>
+          <button id="btn-logout" class="btn-logout" onclick="logout()">⏏ Logout</button>
         </div>
       </header>
 

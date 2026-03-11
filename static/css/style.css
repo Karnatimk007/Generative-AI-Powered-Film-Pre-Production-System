@@ -1373,3 +1373,274 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(212,175,55,0.35);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AUTH MODAL — Tabs, forms, messages, logout
+══════════════════════════════════════════════════════════════════════════ */
+
+/* Tab switcher */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-gold);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: "Cinzel", serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.auth-tab.active {
+  background: linear-gradient(135deg, #d4af37, #a07820);
+  color: #080810;
+}
+.auth-tab:not(.active):hover {
+  color: var(--gold);
+  background: var(--gold-dim);
+}
+
+/* Form layout */
+.auth-form {
+  text-align: left;
+}
+.auth-form .btn-primary {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.5rem;
+  animation: none;
+}
+
+/* Input label */
+.input-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* Password wrap with toggle button */
+.pw-wrap {
+  position: relative;
+}
+.pw-wrap .modal-input {
+  padding-right: 48px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  transition: var(--transition);
+}
+.pw-toggle:hover {
+  color: var(--gold);
+}
+
+/* Error / success message */
+.auth-msg {
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  animation: fadeUp 0.3s ease both;
+}
+.auth-msg.hidden {
+  display: none;
+}
+.auth-msg-error {
+  background: rgba(192, 57, 43, 0.15);
+  border: 1px solid rgba(192, 57, 43, 0.4);
+  color: #e74c3c;
+}
+.auth-msg-success {
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  color: #2ecc71;
+}
+
+/* Switch link */
+.auth-switch {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.auth-switch a {
+  color: var(--gold);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.auth-switch a:hover {
+  color: var(--gold-light);
+  text-decoration: underline;
+}
+
+/* Logout button in topbar */
+.btn-logout {
+  background: rgba(192, 57, 43, 0.12);
+  border: 1px solid rgba(192, 57, 43, 0.3);
+  color: #e57373;
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-left: 6px;
+}
+.btn-logout:hover {
+  background: rgba(192, 57, 43, 0.25);
+  border-color: rgba(192, 57, 43, 0.6);
+  color: #ff6b6b;
+}
+
+/* Wider modal box for register form (more fields) */
+.modal-box {
+  width: min(460px, 92vw);
+}
+
+/* ── Modal title override: show SCRIPTORIA in Cinzel ── */
+.modal-box .modal-title {
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+}
+.modal-box .modal-subtitle {
+  font-size: 0.82rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── New auth submit button ── */
+.btn-auth-submit {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #d4af37, #a07820);
+  color: #080810;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.btn-auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(212, 175, 55, 0.45);
+}
+.btn-auth-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-auth-submit.btn-loading {
+  background: linear-gradient(135deg, #555, #333);
+  color: var(--text-secondary);
+}
+.btn-auth-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Spinner inside button */
+.btn-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Field validation indicators ── */
+.field-indicator {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+.ind-ok  { color: #2ecc71; }
+.ind-err { color: #e74c3c; }
+
+/* For non-pw-wrap inputs, position differently */
+.input-group > .field-indicator {
+  position: static;
+  display: block;
+  transform: none;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* ── Password strength bar ── */
+.pw-strength-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 100px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.pw-strength-fill {
+  height: 100%;
+  border-radius: 100px;
+  width: 0;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.pw-strength-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  min-height: 1em;
+  transition: color 0.3s;
+}
+
+/* ── Input label hint ── */
+.label-hint {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+/* ── Auth msg animation ── */
+.auth-msg {
+  animation: slideDown 0.25s ease both;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

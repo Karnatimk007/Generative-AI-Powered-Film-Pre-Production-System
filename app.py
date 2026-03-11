@@ -1,10 +1,17 @@
 import os
-from flask import Flask, render_template, request, jsonify, session, send_file
-from groq import Groq
-from dotenv import load_dotenv
 import io
 import uuid
 import base64
+from datetime import datetime, timezone
+
+from flask import Flask, render_template, request, jsonify, session, send_file, redirect
+from flask_bcrypt import Bcrypt
+from flask_login import (
+    LoginManager, UserMixin,
+    login_user, logout_user, login_required, current_user
+)
+from groq import Groq
+from dotenv import load_dotenv
 
 # ReportLab imports
 from reportlab.lib.pagesizes import letter
@@ -21,15 +28,21 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
+# MongoDB helpers
+from db import create_user, find_user_by_email, get_user_by_id
+
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
 
-# Load .env — override=True ensures a running server picks up key changes immediately
 load_dotenv(override=True)
 
 app = Flask(__name__)
-app.secret_key = 'scriptoria_secret_key_2024'
+app.secret_key = os.getenv("SECRET_KEY", "scriptoria_secret_key_2024")
+
+bcrypt      = Bcrypt(app)
+login_mgr   = LoginManager(app)
+login_mgr.login_view = "login_page"
 
 # Server-side store — avoids Flask's 4 KB cookie limit for large AI outputs
 _results_store: dict = {}
@@ -38,30 +51,32 @@ GROQ_MODEL  = "llama-3.3-70b-versatile"
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # —— Startup: confirm HF key is loaded ——
-_hf_key_preview = os.getenv("HF_API_KEY", "")
-if _hf_key_preview and _hf_key_preview != "hf_your_token_here":
-    print(f"[Scriptoria] ✅  HF_API_KEY loaded: {_hf_key_preview[:8]}...")
+_hf_key = os.getenv("HF_API_KEY", "").strip()
+if _hf_key and _hf_key != "hf_your_token_here":
+    print(f"[Scriptoria] ✅  HF_API_KEY loaded — nscale image gen ready: {_hf_key[:8]}...")
 else:
-    print("[Scriptoria] ⚠️  HF_API_KEY not set — image generation will prompt for setup.")
+    print("[Scriptoria] ⚠️  HF_API_KEY not set — shot image generation will fail.")
+
+# ---------------------------------------------------------------------------
+# Flask-Login user proxy (reads from MongoDB)
+# ---------------------------------------------------------------------------
+
+class MongoUser(UserMixin):
+    """Thin wrapper so Flask-Login can work with MongoDB documents."""
+    def __init__(self, doc: dict):
+        self._id   = str(doc["_id"])
+        self.name  = doc["name"]
+        self.email = doc["email"]
+
+    def get_id(self):
+        return self._id
 
 
-# Hugging Face client singleton (re-reads env every call so restarts aren't needed)
-_hf_client = None
+@login_mgr.user_loader
+def load_user(user_id: str):
+    doc = get_user_by_id(user_id)
+    return MongoUser(doc) if doc else None
 
-def get_hf_client():
-    global _hf_client
-    from huggingface_hub import InferenceClient
-    # Always re-read from env — load_dotenv(override=True) keeps it fresh
-    api_key = os.getenv("HF_API_KEY", "").strip()
-    if not api_key or api_key == "hf_your_token_here":
-        _hf_client = None       # reset so next attempt retries
-        raise RuntimeError("HF_API_KEY_NOT_CONFIGURED")
-    if _hf_client is None:      # only create once per valid key
-        _hf_client = InferenceClient(
-            provider="hf-inference",
-            api_key=api_key,
-        )
-    return _hf_client
 
 # ---------------------------------------------------------------------------
 # Groq helper
@@ -78,6 +93,27 @@ def generate_with_groq(prompt):
         return chat_completion.choices[0].message.content.strip()
     except Exception as e:
         return f"[ERROR] Groq API error: {str(e)}"
+
+# ---------------------------------------------------------------------------
+# HuggingFace InferenceClient — nscale provider (SD XL Base)
+# ---------------------------------------------------------------------------
+
+_hf_client = None
+
+def get_hf_client():
+    """Return a cached InferenceClient using nscale as the provider."""
+    global _hf_client
+    if _hf_client is None:
+        from huggingface_hub import InferenceClient
+        api_key = os.getenv("HF_API_KEY", "").strip()
+        if not api_key or api_key == "hf_your_token_here":
+            raise RuntimeError("HF_API_KEY_NOT_SET")
+        _hf_client = InferenceClient(
+            provider="nscale",
+            api_key=api_key,
+        )
+        print("[Scriptoria] ✅  nscale InferenceClient initialised.")
+    return _hf_client
 
 # ---------------------------------------------------------------------------
 # Prompt builders
@@ -205,7 +241,82 @@ SHOT DESCRIPTION:
 Output ONLY the final image prompt. No explanation, no preamble, no labels. Just the prompt itself."""
 
 # ---------------------------------------------------------------------------
-# Routes
+# Auth Routes
+# ---------------------------------------------------------------------------
+
+@app.route('/auth/register', methods=['POST'])
+def auth_register():
+    data     = request.get_json(force=True, silent=True) or {}
+    name     = data.get('name', '').strip()
+    email    = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    confirm  = data.get('confirm_password', '')
+
+    if not name or not email or not password:
+        return jsonify({'error': 'Name, email, and password are required.'}), 400
+    if password != confirm:
+        return jsonify({'error': 'Passwords do not match.'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+    if find_user_by_email(email):
+        return jsonify({'error': 'This email is already registered. Please log in.'}), 409
+
+    pw_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    user_id = create_user(name, email, pw_hash)
+
+    from db import get_user_by_id
+    doc  = get_user_by_id(user_id)
+    user = MongoUser(doc)
+    login_user(user, remember=True)
+    session['sid'] = str(uuid.uuid4())
+
+    return jsonify({'success': True, 'name': user.name, 'email': user.email}), 201
+
+
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    data     = request.get_json(force=True, silent=True) or {}
+    email    = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
+
+    doc = find_user_by_email(email)
+    if not doc:
+        print(f"[Auth] Login FAILED — no user found for: {email}")
+        return jsonify({'error': 'No account found with that email. Please register first.'}), 401
+
+    if not bcrypt.check_password_hash(doc['password_hash'], password):
+        print(f"[Auth] Login FAILED — wrong password for: {email}")
+        return jsonify({'error': 'Incorrect password. Please try again.'}), 401
+
+    print(f"[Auth] Login OK — {email}")
+
+    user = MongoUser(doc)
+    login_user(user, remember=True)
+    if 'sid' not in session:
+        session['sid'] = str(uuid.uuid4())
+
+    return jsonify({'success': True, 'name': user.name, 'email': user.email})
+
+
+@app.route('/auth/logout', methods=['POST'])
+@login_required
+def auth_logout():
+    logout_user()
+    session.clear()
+    return jsonify({'success': True})
+
+
+@app.route('/auth/me', methods=['GET'])
+def auth_me():
+    if current_user.is_authenticated:
+        return jsonify({'authenticated': True, 'name': current_user.name, 'email': current_user.email})
+    return jsonify({'authenticated': False})
+
+# ---------------------------------------------------------------------------
+# Main routes
 # ---------------------------------------------------------------------------
 
 @app.route('/')
@@ -213,24 +324,24 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/set_user', methods=['POST'])
-def set_user():
-    data = request.get_json()
-    name = data.get('name', '').strip()
-    if not name:
-        return jsonify({'error': 'Name is required'}), 400
-    session['user_name'] = name
-    if 'sid' not in session:
-        session['sid'] = str(uuid.uuid4())
-    return jsonify({'success': True, 'name': name})
+@app.route('/login')
+def login_page():
+    """Dedicated login page."""
+    if current_user.is_authenticated:
+        return redirect('/')
+    return render_template('login.html')
 
 
-@app.route('/get_user', methods=['GET'])
-def get_user():
-    return jsonify({'name': session.get('user_name', '')})
+@app.route('/register')
+def register_page():
+    """Dedicated register page."""
+    if current_user.is_authenticated:
+        return redirect('/')
+    return render_template('register.html')
 
 
 @app.route('/generate', methods=['POST'])
+@login_required
 def generate():
     data  = request.get_json()
     story = data.get('story', '').strip()
@@ -265,9 +376,12 @@ def get_results():
 
 
 @app.route('/generate_shot_image', methods=['POST'])
+@login_required
 def generate_shot_image():
-    """Convert a shot description → cinematic AI prompt → HF SDXL image (base64)."""
-    data = request.get_json(force=True, silent=True) or {}
+    """
+    Shot description → Groq cinematic prompt → nscale SD XL image → base64 data-URI.
+    """
+    data      = request.get_json(force=True, silent=True) or {}
     shot_text = data.get('shot_description', '').strip()
 
     if not shot_text:
@@ -278,41 +392,34 @@ def generate_shot_image():
     if image_prompt.startswith('[ERROR]'):
         return jsonify({'error': image_prompt}), 500
 
-    # Step 2 — Call Hugging Face SDXL (free tier, returns a PIL Image)
+    # Step 2 — Generate via nscale → SD XL Base (returns PIL.Image)
     try:
-        client = get_hf_client()
+        client    = get_hf_client()
         pil_image = client.text_to_image(
-            prompt=image_prompt[:900],          # keep within model token limits
+            image_prompt[:900],   # keep within model token budget
             model="stabilityai/stable-diffusion-xl-base-1.0",
         )
-    except RuntimeError as env_err:
-        if "HF_API_KEY_NOT_CONFIGURED" in str(env_err):
+    except RuntimeError as err:
+        if "HF_API_KEY_NOT_SET" in str(err):
             return jsonify({
                 'setup_required': True,
-                'steps': [
-                    'Visit https://huggingface.co/settings/tokens',
-                    'Click "New token" → choose Role: Read → click Create',
-                    'Copy the token (it starts with  hf_...)',
-                    'Open the file  .env  in your project folder',
-                    'Replace  hf_your_token_here  with your real token',
-                    'Save the file, then restart the server:  python app.py',
-                ]
+                'message': 'HF_API_KEY is missing. Add your Hugging Face token to .env as HF_API_KEY.',
             }), 200
-        return jsonify({'error': str(env_err)}), 500
-    except Exception as hf_err:
-        return jsonify({'error': f'HF image generation failed: {str(hf_err)}'}), 500
+        return jsonify({'error': str(err)}), 500
+    except Exception as gen_err:
+        return jsonify({'error': f'nscale image generation failed: {str(gen_err)}'}), 500
 
-    # Step 3 — Convert PIL Image → base64 PNG data-URI (no external host needed)
+    # Step 3 — Convert PIL Image → base64 PNG data-URI
     buf = io.BytesIO()
     pil_image.save(buf, format='PNG')
     buf.seek(0)
-    b64 = base64.b64encode(buf.read()).decode('utf-8')
+    b64      = base64.b64encode(buf.read()).decode('utf-8')
     data_uri = f"data:image/png;base64,{b64}"
 
     return jsonify({
-        'success': True,
+        'success':      True,
         'image_prompt': image_prompt,
-        'image_url': data_uri,   # frontend <img src> accepts data-URIs directly
+        'image_url':    data_uri,
     })
 
 # ---------------------------------------------------------------------------
@@ -320,6 +427,7 @@ def generate_shot_image():
 # ---------------------------------------------------------------------------
 
 @app.route('/export/<content_type>/<fmt>', methods=['POST'])
+@login_required
 def export(content_type, fmt):
     data    = request.get_json(force=True, silent=True) or {}
     content = data.get('content', '').strip()

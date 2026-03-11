@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Account — Scriptoria</title>
+    <meta name="description" content="Create your free Scriptoria account and start building your film pre-production package with AI." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/auth-pages.css" />
+  </head>
+  <body>
+    <!-- Film grain overlay -->
+    <div class="film-grain"></div>
+
+    <!-- Film strips -->
+    <div class="film-strip top"><div class="strip-roll"></div></div>
+    <div class="film-strip bottom"><div class="strip-roll"></div></div>
+
+    <div class="auth-page">
+      <!-- Left panel: branding -->
+      <div class="auth-brand">
+        <div class="brand-inner">
+          <div class="brand-badge">✦ AI PRE-PRODUCTION STUDIO ✦</div>
+          <h1 class="brand-title">SCRIPTORIA</h1>
+          <p class="brand-tagline">Join thousands of filmmakers who use AI to bring their stories to life.</p>
+
+          <div class="brand-steps">
+            <div class="step-item"><span class="step-num">1</span><span>Describe your story idea</span></div>
+            <div class="step-item"><span class="step-num">2</span><span>AI generates all 5 deliverables</span></div>
+            <div class="step-item"><span class="step-num">3</span><span>Export as PDF, DOCX, or TXT</span></div>
+          </div>
+
+          <div class="brand-features">
+            <div class="feature-item"><span class="fi-icon">📜</span><span>Screenplay</span></div>
+            <div class="feature-item"><span class="fi-icon">👤</span><span>Character Profiles</span></div>
+            <div class="feature-item"><span class="fi-icon">🎵</span><span>Sound Design</span></div>
+            <div class="feature-item"><span class="fi-icon">🎬</span><span>Shot List</span></div>
+            <div class="feature-item"><span class="fi-icon">📋</span><span>Script Breakdown</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right panel: form -->
+      <div class="auth-form-panel">
+        <div class="auth-card">
+          <div class="auth-card-icon">🎬</div>
+          <h2 class="auth-card-title">Create Account</h2>
+          <p class="auth-card-sub">Your free director's pass to the AI studio</p>
+
+          <!-- Message banner -->
+          <div id="auth-msg" class="auth-msg hidden"></div>
+
+          <form id="form-register" onsubmit="submitRegister(event)" autocomplete="on" novalidate>
+            <div class="field-wrap">
+              <label class="field-label" for="reg-name">👤 Full Name</label>
+              <div class="input-row">
+                <input
+                  type="text"
+                  id="reg-name"
+                  class="field-input"
+                  placeholder="e.g. Stanley Kubrick"
+                  maxlength="60"
+                  autocomplete="name"
+                  required
+                  oninput="validateName(this)"
+                />
+                <span class="field-ind" id="ind-name"></span>
+              </div>
+            </div>
+
+            <div class="field-wrap">
+              <label class="field-label" for="reg-email">📧 Email Address</label>
+              <div class="input-row">
+                <input
+                  type="email"
+                  id="reg-email"
+                  class="field-input"
+                  placeholder="director@studio.com"
+                  autocomplete="email"
+                  required
+                  oninput="validateEmail(this, 'ind-email')"
+                />
+                <span class="field-ind" id="ind-email"></span>
+              </div>
+            </div>
+
+            <div class="field-wrap">
+              <label class="field-label" for="reg-password">
+                🔑 Password
+                <span class="field-hint">min. 6 characters</span>
+              </label>
+              <div class="input-row pw-row">
+                <input
+                  type="password"
+                  id="reg-password"
+                  class="field-input"
+                  placeholder="Create a strong password"
+                  autocomplete="new-password"
+                  required
+                  oninput="onPwInput(this)"
+                />
+                <button type="button" class="pw-eye" onclick="togglePw('reg-password', this)" title="Show/hide">👁</button>
+              </div>
+              <!-- Strength bar -->
+              <div class="pw-strength-bar">
+                <div class="pw-strength-fill" id="pw-fill"></div>
+              </div>
+              <div class="pw-strength-lbl" id="pw-lbl"></div>
+            </div>
+
+            <div class="field-wrap">
+              <label class="field-label" for="reg-confirm">✔️ Confirm Password</label>
+              <div class="input-row pw-row">
+                <input
+                  type="password"
+                  id="reg-confirm"
+                  class="field-input"
+                  placeholder="Repeat your password"
+                  autocomplete="new-password"
+                  required
+                  oninput="checkConfirm(this)"
+                />
+                <button type="button" class="pw-eye" onclick="togglePw('reg-confirm', this)" title="Show/hide">👁</button>
+              </div>
+              <span class="field-ind field-ind-block" id="ind-confirm"></span>
+            </div>
+
+            <button type="submit" id="btn-register" class="auth-btn">
+              <span class="auth-btn-inner">
+                <span id="btn-icon">✦</span>
+                <span id="btn-text">Create My Account</span>
+              </span>
+            </button>
+          </form>
+
+          <div class="auth-divider"><span>or</span></div>
+          <p class="auth-switch-text">
+            Already a member?
+            <a href="/login" class="auth-link">← Sign in</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      // ── Validators ─────────────────────────────────────────────────────
+      function validateName(input) {
+        const el = document.getElementById("ind-name");
+        if (!el) return;
+        const ok = input.value.trim().length >= 2;
+        el.textContent = ok ? "✓" : "✗";
+        el.className   = "field-ind " + (ok ? "ind-ok" : "ind-err");
+      }
+
+      function validateEmail(input, indId) {
+        const el = document.getElementById(indId);
+        if (!el || !input.value) { if (el) el.textContent = ""; return; }
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value);
+        el.textContent = ok ? "✓" : "✗";
+        el.className   = "field-ind " + (ok ? "ind-ok" : "ind-err");
+      }
+
+      function checkConfirm(input) {
+        const pw = document.getElementById("reg-password")?.value;
+        const el = document.getElementById("ind-confirm");
+        if (!el) return;
+        const ok = input.value.length > 0 && input.value === pw;
+        el.textContent = input.value ? (ok ? "✓ Passwords match" : "✗ Doesn't match") : "";
+        el.className   = "field-ind field-ind-block " + (ok ? "ind-ok" : "ind-err");
+      }
+
+      // ── Password strength ───────────────────────────────────────────────
+      const PW_LEVELS = [
+        { l: "",           c: "transparent", p: 0   },
+        { l: "Too short",  c: "#e74c3c",     p: 20  },
+        { l: "Weak",       c: "#e67e22",     p: 40  },
+        { l: "Fair",       c: "#f1c40f",     p: 60  },
+        { l: "Strong",     c: "#2ecc71",     p: 80  },
+        { l: "Very strong",c: "#1abc9c",     p: 100 },
+      ];
+
+      function pwScore(pw) {
+        let s = 0;
+        if (pw.length >= 6)       s++;
+        if (pw.length >= 10)      s++;
+        if (/[A-Z]/.test(pw))    s++;
+        if (/[0-9]/.test(pw))    s++;
+        if (/[^A-Za-z0-9]/.test(pw)) s++;
+        return s;
+      }
+
+      function onPwInput(input) {
+        const lv   = PW_LEVELS[input.value ? pwScore(input.value) : 0];
+        const fill = document.getElementById("pw-fill");
+        const lbl  = document.getElementById("pw-lbl");
+        if (fill) { fill.style.width = lv.p + "%"; fill.style.background = lv.c; }
+        if (lbl)  { lbl.textContent = lv.l; lbl.style.color = lv.c; }
+        const confirm = document.getElementById("reg-confirm");
+        if (confirm && confirm.value) checkConfirm(confirm);
+      }
+
+      // ── Toggle password visibility ───────────────────────────────────────
+      function togglePw(id, btn) {
+        const inp = document.getElementById(id);
+        inp.type = inp.type === "password" ? "text" : "password";
+        btn.textContent = inp.type === "password" ? "👁" : "🙈";
+      }
+
+      // ── Message banner ───────────────────────────────────────────────────
+      function showMsg(msg, ok = false) {
+        const el = document.getElementById("auth-msg");
+        el.innerHTML = `<span>${ok ? "✅" : "⚠️"} ${msg}</span>`;
+        el.className = "auth-msg " + (ok ? "msg-ok" : "msg-err");
+      }
+
+      // ── Button loading ───────────────────────────────────────────────────
+      function setLoading(on) {
+        const btn  = document.getElementById("btn-register");
+        const icon = document.getElementById("btn-icon");
+        const txt  = document.getElementById("btn-text");
+        btn.disabled = on;
+        btn.classList.toggle("loading", on);
+        icon.innerHTML  = on ? '<span class="spin"></span>' : "✦";
+        txt.textContent = on ? "Creating account…" : "Create My Account";
+      }
+
+      // ── Submit ──────────────────────────────────────────────────────────
+      async function submitRegister(e) {
+        e.preventDefault();
+        const name     = document.getElementById("reg-name").value.trim();
+        const email    = document.getElementById("reg-email").value.trim();
+        const password = document.getElementById("reg-password").value;
+        const confirm  = document.getElementById("reg-confirm").value;
+
+        if (!name || !email || !password || !confirm) { showMsg("Please fill in all fields."); return; }
+        if (password !== confirm) { showMsg("Passwords do not match — please re-enter."); return; }
+        if (password.length < 6)  { showMsg("Password must be at least 6 characters."); return; }
+
+        setLoading(true);
+        try {
+          const res  = await fetch("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password, confirm_password: confirm }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            if (data.error && data.error.includes("already registered")) {
+              showMsg(data.error + " Redirecting to sign-in…");
+              setTimeout(() => window.location.href = "/login", 1800);
+            } else {
+              showMsg(data.error || "Registration failed. Please try again.");
+            }
+            return;
+          }
+
+          showMsg(`Account created! Welcome, ${data.name}! 🎬 Entering studio…`, true);
+          setTimeout(() => window.location.href = "/", 900);
+        } catch {
+          showMsg("Network error — is the server running?");
+        } finally {
+          setLoading(false);
+        }
+      }
+    </script>
+  </body>
+</html>

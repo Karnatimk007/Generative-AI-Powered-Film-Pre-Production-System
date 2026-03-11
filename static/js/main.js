@@ -8,6 +8,7 @@
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
   userName: "",
+  userEmail: "",
   results: {},
   generating: false,
   activeSection: "input",
@@ -28,18 +29,23 @@ document.addEventListener("DOMContentLoaded", () => {
   checkExistingSession();
 });
 
+// On page load — call /auth/me to see if user is already logged in
 function checkExistingSession() {
-  fetch("/get_user")
+  fetch("/auth/me")
     .then((r) => r.json())
     .then((data) => {
-      if (data.name) {
-        state.userName = data.name;
+      if (data.authenticated) {
+        state.userName  = data.name;
+        state.userEmail = data.email;
+        // Restore any in-progress results
         fetch("/get_results")
           .then((r) => r.json())
           .then((results) => {
             if (Object.keys(results).length > 0) {
               state.results = results;
               enterApp(true);
+            } else {
+              enterApp(false);
             }
           });
       }
@@ -78,55 +84,255 @@ function initCharCounter() {
   });
 }
 
-// ── Landing → Modal ────────────────────────────────────────────────────────
-function showUserModal() {
-  const overlay = document.getElementById("modal-overlay");
-  overlay.classList.remove("hidden");
-  setTimeout(() => document.getElementById("input-name").focus(), 300);
-}
-
-function closeModalOutside(event) {
-  if (event.target === document.getElementById("modal-overlay")) {
-    if (state.userName) closeModal();
-  }
+// ── Auth Modal ─────────────────────────────────────────────────────────────
+function showAuthModal() {
+  document.getElementById("modal-overlay").classList.remove("hidden");
+  setTimeout(() => document.getElementById("login-email").focus(), 350);
 }
 
 function closeModal() {
   document.getElementById("modal-overlay").classList.add("hidden");
+  clearAuthMsg();
 }
 
-async function submitName() {
-  const input = document.getElementById("input-name");
-  const name = input.value.trim();
-  if (!name) {
-    input.style.borderColor = "#e74c3c";
-    input.placeholder = "Please enter your name...";
-    setTimeout(() => { input.style.borderColor = ""; }, 1500);
-    return;
+function closeModalOutside(event) {
+  if (event.target === document.getElementById("modal-overlay") && state.userName) {
+    closeModal();
   }
+}
 
-  const btn = document.getElementById("btn-submit-name");
-  btn.disabled = true;
-  btn.textContent = "Entering...";
+function switchTab(tab) {
+  const loginForm = document.getElementById("form-login");
+  const regForm   = document.getElementById("form-register");
+  const tabLogin  = document.getElementById("tab-login");
+  const tabReg    = document.getElementById("tab-register");
+  clearAuthMsg();
+
+  if (tab === "login") {
+    loginForm.classList.remove("hidden");
+    regForm.classList.add("hidden");
+    tabLogin.classList.add("active");
+    tabReg.classList.remove("active");
+    setTimeout(() => document.getElementById("login-email").focus(), 120);
+  } else {
+    regForm.classList.remove("hidden");
+    loginForm.classList.add("hidden");
+    tabReg.classList.add("active");
+    tabLogin.classList.remove("active");
+    setTimeout(() => document.getElementById("reg-name").focus(), 120);
+  }
+}
+
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "🙈";
+  } else {
+    input.type = "password";
+    btn.textContent = "👁";
+  }
+}
+
+// ── Auth message ────────────────────────────────────────────────────────────
+function showAuthMsg(msg, isError = true) {
+  const el = document.getElementById("auth-msg");
+  if (!el) return;
+  const icon = isError ? "⚠️" : "✅";
+  el.innerHTML = `<span>${icon} ${msg}</span>`;
+  el.className = "auth-msg " + (isError ? "auth-msg-error" : "auth-msg-success");
+}
+
+function clearAuthMsg() {
+  const el = document.getElementById("auth-msg");
+  if (el) el.className = "auth-msg hidden";
+}
+
+// ── Real-time field validators ───────────────────────────────────────────────
+function setIndicator(id, ok, emptyOk = false) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isEmpty = !document.getElementById(id.replace("ind-",""))?.value?.trim?.();
+  if (emptyOk && isEmpty) { el.textContent = ""; return; }
+  el.textContent = ok ? "✓" : "✗";
+  el.className   = "field-indicator " + (ok ? "ind-ok" : "ind-err");
+}
+
+function validateField(input, predicate, indicatorId) {
+  setIndicator(indicatorId, predicate(input.value));
+}
+
+function validateLoginEmail(input) {
+  setIndicator("ind-login-email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value));
+}
+
+function validateRegEmail(input) {
+  setIndicator("ind-reg-email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value));
+}
+
+// ── Password strength ────────────────────────────────────────────────────────
+function getPasswordStrength(pw) {
+  let score = 0;
+  if (pw.length >= 6)  score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score; // 0-5
+}
+
+const PW_LEVELS = [
+  { label: "",         color: "transparent",  pct: 0   },
+  { label: "Too short", color: "#e74c3c",     pct: 20  },
+  { label: "Weak",      color: "#e67e22",     pct: 40  },
+  { label: "Fair",      color: "#f1c40f",     pct: 60  },
+  { label: "Strong",    color: "#2ecc71",     pct: 80  },
+  { label: "Very strong", color: "#1abc9c",   pct: 100 },
+];
+
+function onPasswordInput(input) {
+  const score = input.value ? getPasswordStrength(input.value) : 0;
+  const level = PW_LEVELS[score] || PW_LEVELS[0];
+  const fill  = document.getElementById("pw-strength-fill");
+  const lbl   = document.getElementById("pw-strength-label");
+  if (fill) {
+    fill.style.width      = level.pct + "%";
+    fill.style.background = level.color;
+  }
+  if (lbl) {
+    lbl.textContent  = level.label;
+    lbl.style.color  = level.color;
+  }
+  // Also update confirm indicator if already typed
+  const confirm = document.getElementById("reg-confirm");
+  if (confirm && confirm.value) checkConfirm(confirm);
+}
+
+function checkConfirm(confirmInput) {
+  const pw = document.getElementById("reg-password")?.value;
+  setIndicator("ind-reg-confirm", confirmInput.value === pw && confirmInput.value.length > 0);
+}
+
+// ── Button loading state ──────────────────────────────────────────────────────
+function setBtnLoading(btnId, iconId, textId, loading, loadingText, defaultText, defaultIcon = "✦") {
+  const btn  = document.getElementById(btnId);
+  const ico  = document.getElementById(iconId);
+  const txt  = document.getElementById(textId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    if (ico) ico.innerHTML = '<span class="btn-spinner"></span>';
+    if (txt) txt.textContent = loadingText;
+    btn.classList.add("btn-loading");
+  } else {
+    if (ico) ico.textContent = defaultIcon;
+    if (txt) txt.textContent = defaultText;
+    btn.classList.remove("btn-loading");
+  }
+}
+
+// ── Login ────────────────────────────────────────────────────────────────────
+async function submitLogin(event) {
+  event.preventDefault();
+  const email    = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+
+  if (!email || !password) { showAuthMsg("Please fill in both email and password."); return; }
+
+  setBtnLoading("btn-login", "btn-login-icon", "btn-login-text", true, "Signing in…", "Enter the Studio");
+  clearAuthMsg();
 
   try {
-    const res = await fetch("/set_user", {
-      method: "POST",
+    const res  = await fetch("/auth/login", {
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body:    JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (data.success) {
-      state.userName = data.name;
-      closeModal();
-      enterApp(false);
+
+    if (!res.ok) {
+      // If no account found, nudge user to register
+      if (data.error && data.error.includes("No account")) {
+        showAuthMsg(data.error);
+        setTimeout(() => switchTab("register"), 1800);
+      } else {
+        showAuthMsg(data.error || "Login failed. Please try again.");
+      }
+      return;
     }
-  } catch (err) {
-    showToast("⚠️ Could not save name. Please try again.");
+
+    // ✅ Success animation
+    showAuthMsg(`Welcome back, ${data.name}! Entering studio…`, false);
+    state.userName  = data.name;
+    state.userEmail = data.email;
+    setTimeout(() => { closeModal(); enterApp(false); showToast(`🎬 Welcome back, ${data.name}!`); }, 900);
+
+  } catch {
+    showAuthMsg("Network error — is the server running?");
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Enter the Studio →";
+    setBtnLoading("btn-login", "btn-login-icon", "btn-login-text", false, "", "Enter the Studio");
   }
+}
+
+// ── Register ─────────────────────────────────────────────────────────────────
+async function submitRegister(event) {
+  event.preventDefault();
+  const name     = document.getElementById("reg-name").value.trim();
+  const email    = document.getElementById("reg-email").value.trim();
+  const password = document.getElementById("reg-password").value;
+  const confirm  = document.getElementById("reg-confirm").value;
+
+  if (!name || !email || !password || !confirm) { showAuthMsg("Please fill in all fields."); return; }
+  if (password !== confirm) { showAuthMsg("Passwords do not match — please check and retry."); return; }
+  if (password.length < 6)  { showAuthMsg("Password must be at least 6 characters."); return; }
+
+  setBtnLoading("btn-register", "btn-register-icon", "btn-register-text", true, "Creating account…", "Create My Account");
+  clearAuthMsg();
+
+  try {
+    const res  = await fetch("/auth/register", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ name, email, password, confirm_password: confirm }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      // If already registered, nudge to login tab
+      if (data.error && data.error.includes("already registered")) {
+        showAuthMsg(data.error);
+        setTimeout(() => switchTab("login"), 1800);
+      } else {
+        showAuthMsg(data.error || "Registration failed. Please try again.");
+      }
+      return;
+    }
+
+    showAuthMsg(`Account created! Welcome, ${data.name}! 🎬`, false);
+    state.userName  = data.name;
+    state.userEmail = data.email;
+    setTimeout(() => { closeModal(); enterApp(false); showToast(`🎬 Welcome to Scriptoria, ${data.name}!`); }, 900);
+
+  } catch {
+    showAuthMsg("Network error — is the server running?");
+  } finally {
+    setBtnLoading("btn-register", "btn-register-icon", "btn-register-text", false, "", "Create My Account");
+  }
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+async function logout() {
+  try { await fetch("/auth/logout", { method: "POST" }); } catch { /* ignore */ }
+  state.userName   = "";
+  state.userEmail  = "";
+  state.results    = {};
+  state.generating = false;
+  document.getElementById("page-app").classList.add("hidden");
+  document.getElementById("page-app").classList.remove("active");
+  document.getElementById("page-landing").classList.remove("hidden");
+  document.getElementById("page-landing").classList.add("active");
+  showToast("👋 You've been logged out.");
 }
 
 // ── Page transitions ───────────────────────────────────────────────────────
@@ -385,16 +591,48 @@ function renderShotList(section, content) {
   }
 
   section.innerHTML = `
-    <div class="output-header">
+    <div class="output-header" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
         <div class="output-title">${meta.icon} ${meta.title}</div>
-        <div class="output-meta">${wordCount.toLocaleString()} words · ${shots.length} shots · Click 🎨 Generate Frame on any shot for AI image</div>
+        <div class="output-meta">${wordCount.toLocaleString()} words · ${shots.length} shots</div>
       </div>
+      ${shots.length > 0 ? `
+        <button class="btn-primary" style="padding: 8px 16px; font-size: 0.8rem; margin-right: 1rem;" onclick="generateAllShots()">
+          <span class="btn-icon">🎞️</span> Generate All Images
+        </button>
+      ` : ''}
     </div>
     <div class="shot-list-grid">
       ${shotsHTML}
     </div>
   `;
+}
+
+async function generateAllShots() {
+  const buttons = Array.from(document.querySelectorAll(".btn-gen-image"));
+  if (buttons.length === 0) return;
+
+  // Change the button text temporarily to show it's working
+  const genAllBtn = event.currentTarget || document.querySelector("button[onclick='generateAllShots()']");
+  const originalHtml = genAllBtn.innerHTML;
+  genAllBtn.innerHTML = '<span class="spin"></span> Generating all...';
+  genAllBtn.disabled = true;
+
+  // We can fire them all concurrently! The Hugging Face API (fal-ai) is fast.
+  const promises = buttons.map(async (btn) => {
+    // Only generate if it hasn't been generated yet (or isn't currently generating)
+    if (!btn.disabled && !btn.innerHTML.includes('Regenerate')) {
+      await new Promise(r => setTimeout(r, Math.random() * 500)); // Slight stagger to avoid rate limits
+      btn.click();
+    }
+  });
+
+  // Wait for all to finish (btn.click() doesn't return a promise directly, but it triggers the async function)
+  // We'll just restore the button right away, the individual loading bars will handle the UX.
+  setTimeout(() => {
+    genAllBtn.innerHTML = originalHtml;
+    genAllBtn.disabled = false;
+  }, 1000);
 }
 
 function parseShotsFromText(content) {
