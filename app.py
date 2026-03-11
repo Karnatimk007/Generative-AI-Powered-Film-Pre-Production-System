@@ -317,6 +317,33 @@ def auth_me():
         return jsonify({'authenticated': True, 'name': current_user.name, 'email': current_user.email})
     return jsonify({'authenticated': False})
 
+@app.route('/auth/test_db', methods=['GET'])
+def test_db_connection():
+    """Diagnostic tool to test MongoDB configuration on deployed platforms."""
+    import sys
+    import traceback
+    try:
+        from db import get_db
+        db = get_db()
+        client = db.client
+        # Force a database call to verify it's not just holding a lazy connection
+        client.admin.command('ping')
+        return jsonify({
+            'status': 'success',
+            'message': 'Connected to MongoDB successfully!',
+            'database': db.name,
+            'uri_prefix': os.getenv('MONGO_URI', 'localhost')[:20] + '...'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error_type': type(e).__name__,
+            'error_message': str(e),
+            'traceback': traceback.format_exc(),
+            'uri_prefix': os.getenv('MONGO_URI', 'not_set')[:20] + '...',
+            'python_version': sys.version
+        }), 500
+
 # ---------------------------------------------------------------------------
 # Main routes
 # ---------------------------------------------------------------------------
